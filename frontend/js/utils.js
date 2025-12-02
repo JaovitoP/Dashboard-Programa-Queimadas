@@ -1,11 +1,11 @@
 function getCorBioma(bioma) {
     const cores = {
-        'Amazonia': '#FF6B35', 
-        'Cerrado': '#FFA62B',
-        'Mata Atlantica': '#FFD166',
-        'Caatinga': '#EF476F',
-        'Pampa': '#FF9A76',
-        'Pantanal': '#E85D04' 
+        'Amazonia': '#009216ff',
+        'Cerrado': '#FBB13C',
+        'Mata Atlantica': '#205b23ff',
+        'Caatinga': '#D4A373',
+        'Pampa': '#90CAF9',
+        'Pantanal': '#0288D1'
     };
     return cores[bioma] || '#607D8B';
 }
@@ -17,7 +17,7 @@ function getCorRisco(risco) {
         'Alto': '#f44336',
         'Crítico': '#9C27B0'
     };
-    return cores[risco] || '#607D8B';
+    return cores[risco] || '#FF9800';
 }
 
 function getClasseRisco(frp) {

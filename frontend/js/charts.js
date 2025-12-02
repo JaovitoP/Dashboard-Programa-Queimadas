@@ -24,7 +24,7 @@ function criarGraficoEstados(dados) {
         series: [{ 
             name: "Focos", 
             data: Object.values(dados.focos_por_estado), 
-            color: "#ff9800"
+            color: "#ff0000ff"
         }],
         tooltip: {
             valueSuffix: ' focos'
@@ -101,7 +101,7 @@ function criarGraficoDia(dados) {
         series: [{ 
             name: "Focos", 
             data: ultimos30Dias.map(([, valor]) => valor), 
-            color: "#ff9800",
+            color: "#ff0000ff",
             marker: { enabled: true }
         }],
         tooltip: {
