@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard de Incêndios</title>
+
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/maps/highmaps.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/map.js"></script>
+    <script src="https://code.highcharts.com/maps/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/mapdata/countries/br/br-all.js"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/tabela.js"></script>
+    <script src="js/filtros.js"></script>
+    <script src="js/dashboard.js"></script>
+</head>
+<body>
+
+<header>
+    <h1>Dashboard de Incêndios no Brasil</h1>
+    <small id="dataAtualizacao">Carregando...</small>
+</header>
+
+<div class="container">
+    <div class="filtros hidden">
+        <select id="filtroEstado">
+            <option value="">Todos os Estados</option>
+        </select>
+
+        <select id="filtroBioma">
+            <option value="">Todos os Biomas</option>
+        </select>
+
+        <input type="date" id="filtroInicio">
+        <input type="date" id="filtroFim">
+
+        <button onclick="aplicarFiltros()">Aplicar</button>
+        <button onclick="resetarFiltros()" style="background: #6c757d;">Limpar</button>
+    </div>
+
+    <div class="cards">
+        <div class="card">
+            Total de Focos
+            <div class="valor" id="cardTotal"></div>
+        </div>
+        <div class="card">
+            Regiões Afetadas
+            <div class="valor" id="cardEstados"></div>
+        </div>
+        <div class="card">
+            Biomas Afetados
+            <div class="valor" id="cardBiomas"></div>
+        </div>
+        <div class="card">
+            Média FRP
+            <div class="valor" id="cardFRP"></div>
+        </div>
+    </div>
+
+    <div id="chartEstados" class="grafico"></div>
+    <div id="chartBioma" class="grafico"></div>
+    <div id="chartDia" class="grafico"></div>
+    <div id="chartRisco" class="grafico"></div>
+    <div id="chartFRP" class="grafico"></div>
+
+    <h2>Tabela de Focos</h2>
+    
+    <div class="loading" id="tabelaLoading">
+        Carregando dados da tabela...
+    </div>
+
+    <div class="tabela-controles">
+        <div class="tabela-info">
+            Mostrando <span id="tabelaInicio">0</span>-<span id="tabelaFim">0</span> de 
+            <span id="tabelaTotal">0</span> registros
+        </div>
+        <div class="tabela-paginacao">
+            <button onclick="paginaAnterior()" id="btnAnterior" disabled>◀ Anterior</button>
+            <span>Página <span id="paginaAtual">1</span></span>
+            <button onclick="proximaPagina()" id="btnProximo" disabled>Próxima ▶</button>
+        </div>
+    </div>
+
+    <div class="tabela-container">
+        <table id="tabela">
+            <thead>
+                <tr>
+                    <th>Município</th>
+                    <th>Estado</th>
+                    <th>Bioma</th>
+                    <th>Data</th>
+                    <th>FRP (MW)</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaCorpo">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
