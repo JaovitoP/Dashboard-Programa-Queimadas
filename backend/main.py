@@ -19,59 +19,44 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Carregar dados com tratamento de encoding
 try:
     df = pd.read_csv("focos_mensal_br_202511.csv", encoding='utf-8')
 except:
-    # Tentar outros encodings comuns
     try:
         df = pd.read_csv("focos_mensal_br_202511.csv", encoding='latin1')
     except:
         df = pd.read_csv("focos_mensal_br_202511.csv", encoding='cp1252')
 
-# CORREÇÃO CRÍTICA: Limpar e converter dados
 def limpar_dados(df):
-    # Remover espaços extras nos nomes das colunas
     df.columns = df.columns.str.strip()
     
-    # Verificar se as colunas existem
     colunas_esperadas = ['municipio', 'estado', 'bioma', 'frp', 'data_hora_gmt', 'risco_fogo']
     for coluna in colunas_esperadas:
         if coluna not in df.columns:
             print(f"Aviso: Coluna '{coluna}' não encontrada no dataset")
     
-    # Converter frp para numérico, tratando valores inválidos
     if 'frp' in df.columns:
-        # Primeiro, converter para string e remover caracteres não numéricos
         df['frp'] = df['frp'].astype(str).str.replace(',', '.', regex=False)
-        # Converter para numérico, forçando erros para NaN
         df['frp'] = pd.to_numeric(df['frp'], errors='coerce')
-        # Substituir NaN por 0
         df['frp'] = df['frp'].fillna(0)
-        # Remover valores infinitos
         df['frp'] = df['frp'].replace([np.inf, -np.inf], 0)
     else:
         df['frp'] = 0
     
-    # Corrigir encoding dos textos (problema com acentos)
     text_columns = ['municipio', 'estado', 'bioma', 'pais', 'satelite']
     for col in text_columns:
         if col in df.columns:
-            # Tentar corrigir encoding
             df[col] = df[col].astype(str).str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('ascii')
     
-    # Converter data_hora_gmt para datetime
     if 'data_hora_gmt' in df.columns:
         try:
             df['data_hora_gmt'] = pd.to_datetime(df['data_hora_gmt'], errors='coerce')
         except:
-            # Tentar formato específico se o padrão falhar
             try:
                 df['data_hora_gmt'] = pd.to_datetime(df['data_hora_gmt'], format='%m/%d/%Y %H:%M', errors='coerce')
             except:
                 df['data_hora_gmt'] = pd.NaT
     
-    # Corrigir valores específicos baseado no exemplo
     if 'estado' in df.columns:
         df['estado'] = df['estado'].replace({
             'MARANHÃƒO': 'MARANHÃO',
@@ -94,9 +79,7 @@ def limpar_dados(df):
             'SÃƒO RAIMUNDO DO DOCA BEZERRA': 'SÃO RAIMUNDO DO DOCA BEZERRA'
         })
     
-    # Criar coluna de risco se não existir
     if 'risco_fogo' not in df.columns:
-        # Criar risco baseado no FRP
         def calcular_risco(frp):
             if frp < 10:
                 return "Baixo"
@@ -109,14 +92,12 @@ def limpar_dados(df):
         
         df['risco_fogo'] = df['frp'].apply(calcular_risco)
     
-    # Garantir que todas as colunas importantes existam
     for col in ['municipio', 'estado', 'bioma']:
         if col not in df.columns:
             df[col] = 'Desconhecido'
     
     return df
 
-# Aplicar limpeza
 df = limpar_dados(df)
 print(f"Dados carregados: {len(df)} registros")
 print(f"Colunas disponíveis: {list(df.columns)}")
@@ -152,7 +133,6 @@ async def metricas():
     """Retorna métricas gerais"""
     total_focos = len(df)
     
-    # Focos por estado
     if 'estado' in df.columns:
         focos_por_estado = df['estado'].value_counts().to_dict()
         total_estados = df['estado'].nunique()
@@ -160,7 +140,6 @@ async def metricas():
         focos_por_estado = {}
         total_estados = 0
     
-    # Estatísticas do FRP
     if 'frp' in df.columns:
         frp_valores = df['frp'].dropna()
         media_frp = float(frp_valores.mean()) if len(frp_valores) > 0 else 0.0
@@ -170,13 +149,11 @@ async def metricas():
     else:
         media_frp = maior_frp = menor_frp = desvio_frp = 0.0
     
-    # Total biomas
     if 'bioma' in df.columns:
         total_biomas = df['bioma'].nunique()
     else:
         total_biomas = 0
     
-    # Data mais recente
     if 'data_hora_gmt' in df.columns and pd.notna(df['data_hora_gmt']).any():
         data_mais_recente = df['data_hora_gmt'].max()
         if pd.notna(data_mais_recente):
@@ -207,7 +184,6 @@ def limpar_valores_para_json(objeto):
     elif isinstance(objeto, (int, str, bool)):
         return objeto
     elif isinstance(objeto, float):
-        # Substituir NaN/Inf por None
         if pd.isna(objeto) or np.isinf(objeto):
             return None
         return objeto
@@ -231,7 +207,6 @@ async def focos(
     try:
         filtered_df = df.copy()
         
-        # Aplicar filtros
         if estado and estado != "Todos os Estados" and 'estado' in filtered_df.columns:
             filtered_df = filtered_df[filtered_df["estado"] == estado]
         
@@ -268,16 +243,13 @@ async def focos(
             elif criticidade == "critica":
                 filtered_df = filtered_df[filtered_df["frp"] > 100]
         
-        # Ordenar por FRP (maiores primeiro) e limitar
         if 'frp' in filtered_df.columns:
             filtered_df = filtered_df.sort_values("frp", ascending=False)
         
         filtered_df = filtered_df.head(limit)
         
-        # Converter para dicionário
         result = filtered_df.where(pd.notna(filtered_df), None).to_dict(orient="records")
         
-        # Formatar datas para strings e limpar valores
         for item in result:
             for key, value in item.items():
                 if pd.isna(value):
@@ -285,20 +257,17 @@ async def focos(
                 elif isinstance(value, (pd.Timestamp, datetime)):
                     item[key] = value.isoformat() if pd.notna(value) else None
                 elif isinstance(value, (np.float64, np.float32, np.int64, np.int32)):
-                    # Converter tipos numpy para Python nativo
                     if np.isnan(value) or np.isinf(value):
                         item[key] = None
                     else:
                         item[key] = float(value) if isinstance(value, (np.float64, np.float32)) else int(value)
         
-        # Limpar valores para JSON
         result = limpar_valores_para_json(result)
         
         return result
         
     except Exception as e:
         print(f"Erro em /focos: {e}")
-        # Retornar um conjunto limitado de dados em caso de erro
         sample_data = df.head(100).to_dict(orient="records")
         for item in sample_data:
             for key, value in item.items():
@@ -321,28 +290,22 @@ async def focos_por_dia(dias: int = 30):
     """Focos por dia (últimos N dias)"""
     if 'data_hora_gmt' in df.columns and not df['data_hora_gmt'].isna().all():
         try:
-            # Filtrar últimos N dias
             if dias > 0:
                 data_limite = pd.Timestamp.now() - pd.Timedelta(days=dias)
                 filtered_df = df[df['data_hora_gmt'] >= data_limite]
             else:
                 filtered_df = df
             
-            # Agrupar por dia
             filtered_df = filtered_df.copy()
             filtered_df['data_dia'] = filtered_df['data_hora_gmt'].dt.date
             contagem = filtered_df.groupby('data_dia').size()
             
-            # Ordenar por data
             contagem = contagem.sort_index()
             
-            # Converter datas para string
             return {str(k): int(v) for k, v in contagem.to_dict().items()}
         except:
-            # Fallback simples
             return {"2024-01-01": len(df)}
     else:
-        # Fallback se não tiver data
         return {"2024-01-01": len(df)}
 
 @app.get("/risco_fogo")
@@ -351,7 +314,6 @@ async def risco_fogo():
     if 'risco_fogo' in df.columns:
         return df["risco_fogo"].value_counts().to_dict()
     else:
-        # Simular riscos baseados no FRP
         def classificar_risco(frp):
             if frp < 10:
                 return "Baixo"
@@ -372,23 +334,17 @@ async def risco_fogo():
 async def frp_estados(limit: int = 10):
     """Média de FRP por estado (top N)"""
     if 'estado' in df.columns and 'frp' in df.columns:
-        # Calcular média por estado, ignorando NaNs
         media_frp = df.groupby('estado')['frp'].mean()
-        # Remover NaNs
         media_frp = media_frp.dropna()
         
         if len(media_frp) > 0:
-            # Arredondar
             media_frp = media_frp.round(1)
-            # Ordenar por média (maiores primeiro)
             media_frp = media_frp.sort_values(ascending=False)
-            # Limitar se necessário
             if limit > 0:
                 media_frp = media_frp.head(limit)
             
             return media_frp.to_dict()
     
-    # Fallback
     return {"Desconhecido": 0.0}
 
 @app.get("/estados")
@@ -413,12 +369,10 @@ async def biomas():
 async def alertas(critico: bool = True):
     """Retorna focos críticos para alertas"""
     if critico and 'frp' in df.columns:
-        # Focos com FRP > 50
         alertas_df = df[df['frp'] > 50]
     else:
         alertas_df = df
     
-    # Ordenar e limitar
     if 'frp' in alertas_df.columns:
         alertas_df = alertas_df.sort_values('frp', ascending=False)
     elif 'data_hora_gmt' in alertas_df.columns:
@@ -426,7 +380,6 @@ async def alertas(critico: bool = True):
     
     alertas_df = alertas_df.head(20)
     
-    # Converter para dicionário e limpar valores
     result = alertas_df.where(pd.notna(alertas_df), None).to_dict(orient="records")
     for item in result:
         for key, value in item.items():
@@ -447,7 +400,6 @@ async def exportar_csv(
     """Exporta dados em formato CSV"""
     filtered_df = df.copy()
     
-    # Aplicar filtros
     if estado and estado != "Todos os Estados" and 'estado' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["estado"] == estado]
     
@@ -468,12 +420,10 @@ async def exportar_csv(
         except:
             pass
     
-    # Criar CSV em memória
     output = io.StringIO()
     filtered_df.to_csv(output, index=False, encoding='utf-8')
     output.seek(0)
     
-    # Nome do arquivo
     filename = f"incendios_brasil_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
     
     return StreamingResponse(
